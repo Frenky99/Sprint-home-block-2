@@ -23,18 +23,43 @@
       </div>
     </form>
 
-    <div class="card mb-5" v-for="todo in todos" :key="todo.id">
+    <div
+      class="card mb-5"
+      v-for="todo in todos"
+      :key="todo.id"
+      :class="{ 'has-background-success-light': todo.done }"
+    >
       <!-- мы пробрасываем через v-for наши дубляжи карточек, если прописать v-for="hehehe in 100" :key="hehehe", то тоже все будет работать -->
       <!-- todo вспомогательный объект, todos наш основной объект созданный в script, чтобы мы брали информацию не в html, а из сервера-->
       <!-- key наш уникальный идетификатор, его можно не указывать, но html будет подсвечивать ошибку, а браузер нет-->
+      <!-- :class меняем нашу стилистику, : todo.done указали, что как только статус будет выполнен сработают стили -->
       <div class="card-content">
         <div class="content">
           <div class="columns is-vcentered">
-            <div class="column">{{ todo.content }}</div>
+            <div
+              class="column"
+              :class="{ 'has-text-success line-through': todo.done }"
+            >
+              {{ todo.content }}
+            </div>
             <!-- {{todo.content}} мы вывели наш вспомогательный объект наполненный content, прописанный в карточках ref-->
+            <!-- :class мы прописали применение класса, когда будет true -->
             <div class="column is-5 has-text-rigth">
-              <button class="button is-ligth">&check;</button>
-              <button class="button is-danger ml-2">&cross;</button>
+              <button
+                class="button is-ligth"
+                :class="todo.done ? 'is-success' : 'is-light'"
+                @click="toggleDone(todo.id)"
+              >
+                &check;
+              </button>
+              <!-- :class мы прописали наше условаие, что если todo.done будет true, то примениться класс is-success, а если false, то is-light -->
+              <button
+                @click="deleteTodo(todo.id)"
+                class="button is-danger ml-2"
+              >
+                &cross;
+              </button>
+              <!-- @click="deleteTodo(todo.id)" мы назвали наш метод и указали, что по клику ты будешь находишь id этого объекта -->
             </div>
           </div>
         </div>
@@ -48,7 +73,7 @@
 // setup - наш синтаксический сахар(чтобы выглядело все локанично), лучщий синтаксис при работе с однофайловыми компонентами, в нашем случае тоько App.vue
 import { ref } from "vue";
 // ref локальное хранение данных в компоненте, он принимает внутреннее значение и возвращает реактивный и изменяемый объект ref, указывается через .value
-import { v4 as uuidv4 } from "uuid"; 
+import { v4 as uuidv4 } from "uuid";
 // мы импортировали наш uuidv в наш файлик
 
 const todos = ref([
@@ -60,7 +85,7 @@ const todos = ref([
   // {
   //   id: "id2",
   //   content: "hello girls!",
-  //   done: false,
+  //   done: true,
   // },
 ]);
 
@@ -82,6 +107,23 @@ const addTodo = () => {
   newtodoContent.value = "";
   // мы указали, чтобы по умолчанию наше поле ввода было пустым
 };
+
+// Добавляем удаление наших заметок delete todo
+const deleteTodo = (id) => {
+  todos.value = todos.value.filter((todo) => todo.id !== id);
+  // берем наш реактивный массив, получаем наши данные с помощью value, todos.value.filter указали что мы хотим с этим сделать,
+  // (todo) получаем каждый элемент todo, с помощью функции мы указали, что ждём его id, далее !==id сверяем что мы удалили, а что нет
+};
+
+// Добавляем выполнение заметки toddle done
+const toggleDone = (id) => {
+  const index = todos.value.findIndex((todo) => todo.id === id);
+  // мы завели переменную, далее = мы указали что в нашем хранилище найти заметку, ее значение и найти именно индекс,
+  // (todo) получаем каждый элемент todo, с помощью функции мы указали, что ждём его id, далее что он должен быть равено нашему id
+  todos.value[index].done = !todos.value[index].done
+  // создали наш toggle, когда true и когда !(false) мы указали, что у нас есть массив todos и нам нужно его значение value,
+  // указали что у него есть index и метод done, который прописывали в ref
+};
 </script>
 
 
@@ -93,5 +135,9 @@ const addTodo = () => {
   max-width: 400px;
   padding: 20px;
   margin: 0 auto;
+}
+
+.line-through {
+  text-decoration: line-through;
 }
 </style>
