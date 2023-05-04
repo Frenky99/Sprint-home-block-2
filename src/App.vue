@@ -71,10 +71,27 @@
 <script setup>
 // setup() мы говорим нашему коду, что мы разрабатываем с помощью composition API, можно прописать в export default, вместо data(), как мы ранее писали
 // setup - наш синтаксический сахар(чтобы выглядело все локанично), лучщий синтаксис при работе с однофайловыми компонентами, в нашем случае тоько App.vue
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 // ref локальное хранение данных в компоненте, он принимает внутреннее значение и возвращает реактивный и изменяемый объект ref, указывается через .value
-import { v4 as uuidv4 } from "uuid";
-// мы импортировали наш uuidv в наш файлик
+// onMounted ???
+import { db } from "@/firebase";
+/** ипортировали db подключенный в папке firebase, @ быстрый способ попасть к папке, чтобы не прописывать весь путь */
+import {
+  collection,
+  onSnapshot,
+  addDoc,
+  doc,
+  deleteDoc,
+  updateDoc,
+} from "firebase/firestore";
+// onSnapshot метод чтобы мы получали данные из FB
+// addDoc для добавления данных в FB
+// doc, deleteDoc методы для удаления из FB
+// updateDoc если мы хотим обновить некоторые поля документа,без перезаписи всего документа; в нашем случае, чтобы done менялся с false на true и наоборот
+// ранее было указано getDocs, где мы комментировали это мы зачем импортировали??
+
+// import { v4 as uuidv4 } from "uuid";
+// мы импортировали наш uuid в наш файлик, после того, как мы подключили FB, uuid нам больше не нужен
 
 const todos = ref([
   // {
@@ -89,28 +106,61 @@ const todos = ref([
   // },
 ]);
 
+/**
+ * Firebase ref
+ */
+const todosCollectionRef = collection(db, "todos");
+
+/** Получение наших get todos */
+
+// из документации мы закинули функционал для получения данных в реальном времени из FB
+// onSnapshot слушатель документа, он будет получать каждый раз наш снимок результатов, как только там что-то будет меняться
+onMounted(() => {
+  onSnapshot(todosCollectionRef, (querySnapshot) => {
+    const fbTodos = [];
+    querySnapshot.forEach((doc) => {
+      const todo = {
+        id: doc.id,
+        content: doc.data().content,
+        done: doc.data().done,
+      };
+      fbTodos.push(todo);
+    });
+    todos.value = fbTodos;
+  });
+});
+
 //начинаются наши методы add todo
 
 const newtodoContent = ref(""); // создали пустое хранилище, если что-то введем в "", то это отобразится в нашем input
 
 const addTodo = () => {
-  // сюда мы прописали наш метод указанный в form, при вводе какого-то текста в наше окошко(Add a todo), будет отрабатывать
-  const newTodo = {
-    id: uuidv4(), // ???????????
+  addDoc(todosCollectionRef, {
     content: newtodoContent.value,
-    // так как ref принимает значение через value, то для отображения мы добавляем наше пустое хранилище и прописываем value
+    // мы прописали как из FB, что из нашего массива будет считываться значение контента
     done: false,
-  };
-  todos.value.unshift(newTodo);
-  // мы указали, возьми наш массив (todos), добавь ему значение (value), добавь метод unshift (добавляет один или более элементов в начало массива и возвращает новую длину массива),
-  // и в скобках мы указали наш объект в каком формате нам нужна наша запись
+  });
   newtodoContent.value = "";
   // мы указали, чтобы по умолчанию наше поле ввода было пустым
+
+  // ранее способ без подключенного FB
+  // сюда мы прописали наш метод указанный в form, при вводе какого-то текста в наше окошко(Add a todo), будет отрабатывать
+  // const newTodo = {
+  //   id: uuidv4(), // ???????????
+  //   content: newtodoContent.value,
+  //   // так как ref принимает значение через value, то для отображения мы добавляем наше пустое хранилище и прописываем value
+  //   done: false,
+  // };
+  // todos.value.unshift(newTodo);
+  // мы указали, возьми наш массив (todos), добавь ему значение (value), добавь метод unshift (добавляет один или более элементов в начало массива и возвращает новую длину массива),
+  // и в скобках мы указали наш объект в каком формате нам нужна наша запись
 };
 
-// Добавляем удаление наших заметок delete todo
+// Удаление наших заметок delete todo
 const deleteTodo = (id) => {
-  todos.value = todos.value.filter((todo) => todo.id !== id);
+  deleteDoc(doc(todosCollectionRef, id));
+  // строчка из документашки первый аргумент наша коллекция данных, второй аргумент что именно нам там найти id
+  // ранее было написано без подключения к FB, todos.value = todos.value.filter((todo) => todo.id !== id);
   // берем наш реактивный массив, получаем наши данные с помощью value, todos.value.filter указали что мы хотим с этим сделать,
   // (todo) получаем каждый элемент todo, с помощью функции мы указали, что ждём его id, далее !==id сверяем что мы удалили, а что нет
 };
@@ -120,9 +170,17 @@ const toggleDone = (id) => {
   const index = todos.value.findIndex((todo) => todo.id === id);
   // мы завели переменную, далее = мы указали что в нашем хранилище найти заметку, ее значение и найти именно индекс,
   // (todo) получаем каждый элемент todo, с помощью функции мы указали, что ждём его id, далее что он должен быть равено нашему id
-  todos.value[index].done = !todos.value[index].done
+
+  // ранее писали без привязки к FB - todos.value[index].done = !todos.value[index].done;
   // создали наш toggle, когда true и когда !(false) мы указали, что у нас есть массив todos и нам нужно его значение value,
   // указали что у него есть index и метод done, который прописывали в ref
+
+  updateDoc(doc(todosCollectionRef, id), {
+    done: !todos.value[index].done,
+  });
+  // взяли из документации срочку, заменили константу, чтобы не множить их, подставили наш 1 аргумент и id, в done мы прописали как раз таки наш тоглер
+  // что когда у нас по умолчанию false, при нажатии на галочку у нас в FB подтягивалось значение true
+  // метод mark done наша двухсторонняя связка кнопки с FB
 };
 </script>
 
@@ -139,5 +197,11 @@ const toggleDone = (id) => {
 
 .line-through {
   text-decoration: line-through;
+}
+
+@media (min-width: 1024px) {
+  #app {
+    display: block !important;
+  }
 }
 </style>
