@@ -44,7 +44,7 @@
             </div>
             <!-- {{todo.content}} мы вывели наш вспомогательный объект наполненный content, прописанный в карточках ref-->
             <!-- :class мы прописали применение класса, когда будет true -->
-            <div class="column is-5 has-text-rigth">
+            <div class="column is-6 has-text-rigth">
               <button
                 class="button is-ligth"
                 :class="todo.done ? 'is-success' : 'is-light'"
@@ -83,11 +83,14 @@ import {
   doc,
   deleteDoc,
   updateDoc,
+  query,
+  orderBy,
 } from "firebase/firestore";
 // onSnapshot метод чтобы мы получали данные из FB
 // addDoc для добавления данных в FB
 // doc, deleteDoc методы для удаления из FB
 // updateDoc если мы хотим обновить некоторые поля документа,без перезаписи всего документа; в нашем случае, чтобы done менялся с false на true и наоборот
+// query, orderBy, limit(если нам нужны лимиты тогда нужно импортировать тоже) чтобы у нас работала сортировка по дате
 // ранее было указано getDocs, где мы комментировали это мы зачем импортировали??
 
 // import { v4 as uuidv4 } from "uuid";
@@ -110,13 +113,18 @@ const todos = ref([
  * Firebase ref
  */
 const todosCollectionRef = collection(db, "todos");
+// мы завели нашу переменную, чтобы не писать постоянно doc collection
+const todosCollectionQuery = query(todosCollectionRef, orderBy("date", "desc"));
+// завели переменную для сортировки даты из документации FB, первый аргумент наша основная переменна, date мы указали что нам нужно сортировать
+// limit(2) будет нам отображать последние 2 заведенные заметки
+
 
 /** Получение наших get todos */
 
 // из документации мы закинули функционал для получения данных в реальном времени из FB
 // onSnapshot слушатель документа, он будет получать каждый раз наш снимок результатов, как только там что-то будет меняться
 onMounted(() => {
-  onSnapshot(todosCollectionRef, (querySnapshot) => {
+  onSnapshot(todosCollectionQuery, (querySnapshot) => {
     const fbTodos = [];
     querySnapshot.forEach((doc) => {
       const todo = {
@@ -139,6 +147,9 @@ const addTodo = () => {
     content: newtodoContent.value,
     // мы прописали как из FB, что из нашего массива будет считываться значение контента
     done: false,
+    date: Date.now(),
+    // мы устанавливаем время текущей даты, в FB мы увидим добавление уникального ключа date
+    // query метод для упорядочивания наших заметок по дате
   });
   newtodoContent.value = "";
   // мы указали, чтобы по умолчанию наше поле ввода было пустым
